@@ -46,6 +46,7 @@ async def login_post(request: Request):
         httponly=True,
         secure=True,
         samesite="strict",
+        max_age=60 * 60 * 24 * 365,
     )
     return response
 
