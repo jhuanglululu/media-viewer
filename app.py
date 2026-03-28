@@ -21,6 +21,24 @@ async def require_admin(request: Request):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
+def collect_files(folder_name: str, prefix: str = "") -> list[tuple[str, dict]]:
+    """Recursively collect all files from a folder, returning (zip_path, file_row) pairs."""
+    result = []
+    items = fetch_folder(folder_name)
+    if items is None:
+        return result
+    for item in items:
+        if item["item_type"] == "file":
+            row = fetch_file(item["item_name"])
+            if row:
+                result.append((prefix + item["item_name"], row))
+        elif item["item_type"] == "folder":
+            result.extend(
+                collect_files(item["item_name"], prefix + item["item_name"] + "/")
+            )
+    return result
+
+
 # login
 
 
@@ -116,19 +134,20 @@ async def download_zip(name: str):
     if items is None:
         raise HTTPException(404)
 
+    files = collect_files(name)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        for item in items:
-            if item["item_type"] == "file":
-                row = fetch_file(item["item_name"])
-                if row:
-                    path = UPLOAD_DIR / row["filename"]
-                    data = path.read_bytes()
-                    # decompress gzipped files for the zip
-                    if row["filename"].endswith(".gz"):
-                        data = gzip.decompress(data)
-                    ext = Path(row["filename"]).suffix.replace(".gz", "")
-                    zf.writestr(item["item_name"] + ext, data)
+        for zip_path, row in files:
+            path = UPLOAD_DIR / row["filename"]
+            data = path.read_bytes()
+            if row["filename"].endswith(".gz"):
+                data = gzip.decompress(data)
+            ext = (
+                "." + row["extension"]
+                if not zip_path.endswith(row["extension"])
+                else ""
+            )
+            zf.writestr(zip_path + ext, data)
     buf.seek(0)
     return Response(
         content=buf.read(),
