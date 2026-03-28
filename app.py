@@ -141,7 +141,11 @@ async def image_get(name: str):
     row = fetch_file(name)
     if not row or row["media_type"] != "image/webp":
         raise HTTPException(404)
-    return FileResponse(UPLOAD_DIR / row["filename"], media_type="image/webp")
+    return FileResponse(
+        UPLOAD_DIR / row["filename"],
+        media_type="image/webp",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @app.get("/{name}/download")
@@ -178,19 +182,31 @@ async def view_get(name: str, request: Request):
     if row:
         if row["media_type"] == "image/webp":
             return TEMPLATES.TemplateResponse(
-                request, "image.html", {"name": name, "caption": row["caption"]}
+                request,
+                "image.html",
+                {
+                    "name": name,
+                    "caption": row["caption"],
+                },
+                headers={"Cache-Control": "public, max-age=86400"},
             )
         path = UPLOAD_DIR / row["filename"]
         return Response(
             content=path.read_bytes(),
             media_type=row["media_type"],
-            headers={"Content-Encoding": "gzip"},
+            headers={
+                "Content-Encoding": "gzip",
+                "Cache-Control": "public, max-age=86400",
+            },
         )
 
     folder = fetch_folder(name)
     if folder is not None:
         return TEMPLATES.TemplateResponse(
-            request, "folder.html", {"name": name, "items": folder}
+            request,
+            "folder.html",
+            {"name": name, "items": folder},
+            headers={"Cache-Control": "public, max-age=86400"},
         )
 
     raise HTTPException(404)
