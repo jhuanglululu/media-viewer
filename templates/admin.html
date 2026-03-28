@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Admin</title>
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+			background: #0a0a0a;
+			color: #e0e0e0;
+			padding: 2rem;
+			max-width: 800px;
+			margin: 0 auto;
+		}
+		h1 {
+			font-size: 1.1rem;
+			font-weight: 500;
+			color: #fff;
+			margin: 2rem 0 0.75rem;
+			padding-bottom: 0.5rem;
+			border-bottom: 1px solid #1e1e1e;
+		}
+		h1:first-child { margin-top: 0; }
+		.card {
+			background: #151515;
+			border: 1px solid #2a2a2a;
+			border-radius: 8px;
+			padding: 1rem;
+			margin-bottom: 0.5rem;
+		}
+		form.inline { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+		input, select {
+			padding: 0.5rem 0.65rem;
+			background: #0a0a0a;
+			border: 1px solid #2a2a2a;
+			border-radius: 6px;
+			color: #e0e0e0;
+			font-size: 0.85rem;
+			outline: none;
+		}
+		input:focus, select:focus { border-color: #555; }
+		input[type="text"] { flex: 1; min-width: 120px; }
+		input[type="file"] {
+			display: none;
+		}
+		.file-label {
+			padding: 0.5rem 0.85rem;
+			background: #252525;
+			color: #e0e0e0;
+			border: 1px solid #2a2a2a;
+			border-radius: 6px;
+			font-size: 0.85rem;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+		.file-label:hover { background: #333; }
+		.file-name { color: #666; font-size: 0.8rem; }
+		select { min-width: 80px; }
+		button {
+			padding: 0.5rem 0.85rem;
+			background: #252525;
+			color: #e0e0e0;
+			border: 1px solid #2a2a2a;
+			border-radius: 6px;
+			font-size: 0.85rem;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+		button:hover { background: #333; }
+		button.danger { color: #e55; border-color: #511; }
+		button.danger:hover { background: #311; }
+		ul { list-style: none; }
+		li {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.5rem 0;
+			border-bottom: 1px solid #1a1a1a;
+			flex-wrap: wrap;
+		}
+		li:last-child { border-bottom: none; }
+		a { color: #7ab; text-decoration: none; }
+		a:hover { text-decoration: underline; }
+		.type { color: #666; font-size: 0.8rem; }
+		.spacer { flex: 1; }
+		.nested {
+			width: 100%;
+			padding-left: 1.5rem;
+			margin-top: 0.25rem;
+		}
+		.nested li { padding: 0.35rem 0; }
+	</style>
+</head>
+
+<body>
+	<h1>Upload File</h1>
+	<div class="card">
+		<form id="upload-form" class="inline">
+			<input type="text" id="name" placeholder="Name (used in URL)" required />
+			<input type="text" id="caption" placeholder="Caption (optional)" />
+			<label class="file-label" for="file">Choose file</label>
+			<input type="file" id="file" required />
+			<span class="file-name" id="file-display">No file chosen</span>
+			<button type="submit">Upload</button>
+		</form>
+	</div>
+
+	<h1>Create Folder</h1>
+	<div class="card">
+		<form id="create-folder-form" class="inline">
+			<input type="text" id="folder-name" placeholder="Folder name" required />
+			<button type="submit">Create</button>
+		</form>
+	</div>
+
+	<h1>Add to Folder</h1>
+	<div class="card">
+		<form id="add-to-folder-form" class="inline">
+			<input type="text" id="target-folder" placeholder="Folder name" required />
+			<input type="text" id="item-name" placeholder="Item name" required />
+			<select id="item-type">
+				<option value="file">File</option>
+				<option value="folder">Folder</option>
+			</select>
+			<button type="submit">Add</button>
+		</form>
+	</div>
+
+	<h1>Files</h1>
+	<div class="card">
+		{% if files %}
+		<ul>
+			{% for file in files %}
+			<li>
+				<a href="/{{ file['name'] }}">{{ file['name'] }}</a>
+				<span class="type">{{ file['media_type'] }}</span>
+				<span class="spacer"></span>
+				<button class="danger" onclick="deleteFile('{{ file['name'] }}')">Delete</button>
+			</li>
+			{% endfor %}
+		</ul>
+		{% else %}
+		<span class="type">No files uploaded</span>
+		{% endif %}
+	</div>
+
+	<h1>Folders</h1>
+	{% if folders %}
+		{% for folder in folders %}
+		<div class="card" style="margin-bottom: 0.5rem;">
+			<div style="display: flex; align-items: center; gap: 0.5rem;">
+				<a href="/{{ folder['name'] }}">{{ folder['name'] }}</a>
+				<span class="spacer"></span>
+				<button class="danger" onclick="deleteFolder('{{ folder['name'] }}')">Delete</button>
+			</div>
+			{% if folder['items'] %}
+			<ul style="margin-top: 0.25rem; padding-left: 1rem;">
+				{% for item in folder['items'] %}
+				<li style="padding: 0.25rem 0;">
+					<a href="/{{ item['item_name'] }}">{{ item['item_name'] }}</a>
+					<span class="type">{{ item['item_type'] }}</span>
+					<span class="spacer"></span>
+					<button class="danger" onclick="removeFromFolder('{{ folder['name'] }}', '{{ item['item_name'] }}')">Remove</button>
+				</li>
+				{% endfor %}
+			</ul>
+			{% endif %}
+		</div>
+		{% endfor %}
+	{% else %}
+	<div class="card">
+		<span class="type">No folders created</span>
+	</div>
+	{% endif %}
+
+	<script>
+		document.getElementById("file").addEventListener("change", (e) => {
+			const name = e.target.files[0] ? e.target.files[0].name : "No file chosen";
+			document.getElementById("file-display").textContent = name;
+		});
+
+		document.getElementById("upload-form").addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const name = document.getElementById("name").value;
+			const file = document.getElementById("file").files[0];
+			const form = new FormData();
+			form.append("file", file);
+			form.append("caption", document.getElementById("caption").value);
+			const res = await fetch(`/upload/${name}`, { method: "POST", body: form });
+			if (res.ok) location.reload();
+			else alert("Upload failed: " + res.status);
+		});
+
+		document.getElementById("create-folder-form").addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const name = document.getElementById("folder-name").value;
+			const res = await fetch(`/create-folder/${name}`, { method: "POST" });
+			if (res.ok) location.reload();
+			else alert("Create failed: " + res.status);
+		});
+
+		document.getElementById("add-to-folder-form").addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const folder = document.getElementById("target-folder").value;
+			const form = new FormData();
+			form.append("item_name", document.getElementById("item-name").value);
+			form.append("item_type", document.getElementById("item-type").value);
+			const res = await fetch(`/folder/${folder}/add`, { method: "POST", body: form });
+			if (res.ok) location.reload();
+			else alert("Add failed: " + res.status);
+		});
+
+		async function deleteFile(name) {
+			const res = await fetch(`/delete/${name}`, { method: "POST" });
+			if (res.ok) location.reload();
+			else alert("Delete failed: " + res.status);
+		}
+
+		async function deleteFolder(name) {
+			const res = await fetch(`/delete-folder/${name}`, { method: "POST" });
+			if (res.ok) location.reload();
+			else alert("Delete failed: " + res.status);
+		}
+
+		async function removeFromFolder(folder, item) {
+			const res = await fetch(`/folder/${folder}/remove/${item}`, { method: "POST" });
+			if (res.ok) location.reload();
+			else alert("Remove failed: " + res.status);
+		}
+	</script>
+</body>
+
+</html>
