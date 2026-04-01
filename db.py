@@ -74,7 +74,12 @@ async def save_file(file: UploadFile, name: str, caption: str = ""):
             old_path.unlink()
     db.close()
 
-    if isinstance(file.content_type, str) and file.content_type.startswith("image/"):
+    if isinstance(file.content_type, str) and file.content_type == "image/gif":
+        filename = f"{name}.gif"
+        extension = "gif"
+        media_type = "image/gif"
+        (UPLOAD_DIR / filename).write_bytes(await file.read())
+    elif isinstance(file.content_type, str) and file.content_type.startswith("image/"):
         img = Image.open(file.file)
         filename = f"{name}.webp"
         extension = "webp"

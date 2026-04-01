@@ -159,11 +159,11 @@ async def download_zip(name: str):
 @app.get("/image/{name}")
 async def image_get(name: str):
     row = fetch_file(name)
-    if not row or row["media_type"] != "image/webp":
+    if not row or row["media_type"].startswith("image/"):
         raise HTTPException(404)
     return FileResponse(
         UPLOAD_DIR / row["filename"],
-        media_type="image/webp",
+        media_type=row["media_type"],
         headers={"Cache-Control": "public, max-age=86400"},
     )
 
@@ -184,6 +184,12 @@ async def download_get(name: str):
             media_type="image/png",
             headers={"Content-Disposition": f'attachment; filename="{name}.png"'},
         )
+    elif row["media_type"] == "image/gif":
+        return FileResponse(
+            UPLOAD_DIR / row["filename"],
+            media_type="image/gif",
+            headers={"Content-Disposition": f'attachment; filename="{name}.gif"'},
+        )
     else:
         ext = row["extension"]
         return Response(
@@ -200,7 +206,7 @@ async def download_get(name: str):
 async def view_get(name: str, request: Request):
     row = fetch_file(name)
     if row:
-        if row["media_type"] == "image/webp":
+        if row["media_type"].startswith("image/"):
             return TEMPLATES.TemplateResponse(
                 request,
                 "image.html",
