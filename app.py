@@ -159,7 +159,7 @@ async def download_zip(name: str):
 @app.get("/image/{name}")
 async def image_get(name: str):
     row = fetch_file(name)
-    if not row or row["media_type"].startswith("image/"):
+    if not row or not row["media_type"].startswith("image/"):
         raise HTTPException(404)
     return FileResponse(
         UPLOAD_DIR / row["filename"],
