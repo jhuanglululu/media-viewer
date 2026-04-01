@@ -66,6 +66,14 @@ def would_create_cycle(
 
 
 async def save_file(file: UploadFile, name: str, caption: str = ""):
+    db = get_db()
+    old = db.execute("SELECT filename FROM files WHERE name = ?", (name,)).fetchone()
+    if old:
+        old_path = UPLOAD_DIR / old["filename"]
+        if old_path.exists():
+            old_path.unlink()
+    db.close()
+
     if isinstance(file.content_type, str) and file.content_type.startswith("image/"):
         img = Image.open(file.file)
         filename = f"{name}.webp"
